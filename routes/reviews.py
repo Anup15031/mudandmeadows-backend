@@ -1,26 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import JSONResponse
-from motor.motor_asyncio import AsyncIOMotorDatabase
-from resort_backend.database import get_db
-from typing import List
-from pydantic import BaseModel, Field
-from datetime import datetime
+from fastapi import APIRouter, Request, HTTPException
+from resort_backend.utils import get_db_or_503, serialize_doc
 
-router = APIRouter()
+router = APIRouter(prefix="/reviews", tags=["reviews"])
 
-class Review(BaseModel):
-    reviewer: str = Field(..., example="John Doe")
-    rating: int = Field(..., ge=1, le=5, example=5)
-    comment: str = Field(..., example="Great experience!")
-    date: datetime = Field(default_factory=datetime.utcnow)
-
-@router.get("/reviews", response_model=List[Review])
-async def get_reviews(db: AsyncIOMotorDatabase = Depends(get_db)):
-    reviews = await db.reviews.find().to_list(100)
-    return reviews
-
-@router.post("/reviews", response_model=Review)
-async def add_review(review: Review, db: AsyncIOMotorDatabase = Depends(get_db)):
-    review_dict = review.dict()
-    await db.reviews.insert_one(review_dict)
-    return review_dict
+@router.get("/")
+async def get_reviews(request: Request):
+    """
+    Fetch all reviews from the database.
+    Uses get_db_or_503 to ensure db is available, else returns 503.
+    """
+    db = get_db_or_503(request)
+    try:
+        reviews = await db["reviews"].find().to_list(100)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to fetch reviews")
+    return [serialize_doc(r) for r in reviews]
