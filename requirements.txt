@@ -13,3 +13,4 @@ slowapi==0.1.6
 pyjwt
 httpx==0.24.1
 razorpay==2.0.0
+pydantic[email]

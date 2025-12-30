@@ -31,86 +31,43 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import Response
 import json
 import os
-from dotenv import load_dotenv
+from fastapi import FastAPI
 from motor.motor_asyncio import AsyncIOMotorClient
+from dotenv import load_dotenv
 
-# Load .env into the process environment so runtime env vars (e.g. API_KEY) are available
-load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    logger = logging.getLogger("resort_backend")
-    logger.info("LIFESPAN: Startup initiated")
-    try:
-        await connect_db()
-        logger.info("LIFESPAN: connect_db() completed")
-        # attach db handle to app.state for routes to access
-        try:
-            app.state.db = database.get_db()
-            app.state.db_client = getattr(database, "client", None)
-            logger.info("App startup: DB attached to app.state (db set: %s, client set: %s)", app.state.db is not None, app.state.db_client is not None)
-            try:
-                client = getattr(app.state, "db_client", None)
-                if client is not None:
-                    cmd = client.admin.command("ping")
-                    if hasattr(cmd, "__await__"):
-                        await cmd
-                    else:
-                        client.admin.command("ping")
-                    logger.info("App startup: DB ping successful")
-                    try:
-                        db_handle = getattr(app.state, "db", None)
-                        if db_handle is not None:
-                            await db_handle.locks.delete_many({"expire_at": {"$lt": datetime.utcnow()}})
-                            logger.info("Cleaned up stale locks on startup")
-                    except Exception:
-                        logger.exception("Failed to cleanup stale locks on startup")
-            except Exception:
-                logger.exception("App startup: DB ping failed")
-            if getattr(app.state, "db", None) is None or getattr(app.state, "db_client", None) is None:
-                try:
-                    import motor.motor_asyncio
-                    from os import getenv
-                    MONGODB_URL = getenv("MONGODB_URL")
-                    from resort_backend.database import DATABASE_NAME
-                    if MONGODB_URL:
-                        logger.info("Attempting fallback DB client creation using MONGODB_URL from environment")
-                        fb_client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URL, serverSelectionTimeoutMS=5000)
-                        try:
-                            cmd = fb_client.admin.command("ping")
-                            if hasattr(cmd, "__await__"):
-                                await cmd
-                            else:
-                                fb_client.admin.command("ping")
-                            app.state.db_client = fb_client
-                            app.state.db = fb_client[DATABASE_NAME]
-                            logger.info("Fallback DB client created and ping successful")
-                        except Exception:
-                            logger.exception("Fallback DB ping failed")
-                except Exception:
-                    logger.exception("Fallback DB client creation failed")
-        except Exception:
-            logger.exception("Error attaching DB to app.state (inner)")
-    except Exception as e:
-        logger.exception(f"LIFESPAN: Startup failed: {e}")
-    logger.info("LIFESPAN: Startup complete, yielding to app")
-    yield
-    logger.info("LIFESPAN: Shutdown initiated")
-    try:
-        await close_db()
-        logger.info("LIFESPAN: close_db() completed")
-    except Exception as e:
-        logger.exception(f"LIFESPAN: Shutdown failed: {e}")
-    logger.info("LIFESPAN: Shutdown complete")
+load_dotenv()  # Ensure .env is loaded
 
 app = FastAPI(
     title="Resort Booking API",
     description="API documentation for Resort Booking backend.",
     version="1.0.0",
-    docs_url="/docs",           # Swagger UI
-    redoc_url="/redoc",         # ReDoc UI
-    openapi_url="/openapi.json" # OpenAPI schema
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
 )
+
+@app.on_event("startup")
+async def startup_db_client():
+    # Always use the .env values for MongoDB connection
+    mongo_url = os.getenv("MONGODB_URL")
+    db_name = os.getenv("DATABASE_NAME")
+    if not mongo_url or not db_name:
+        raise RuntimeError("MONGODB_URL and DATABASE_NAME must be set in .env")
+    try:
+        client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000)
+        await client.server_info()
+        app.state.db_client = client
+        app.state.db = client[db_name]
+    except Exception as e:
+        import sys
+        print(f"Could not connect to MongoDB at {mongo_url}: {e}", file=sys.stderr)
+        raise RuntimeError("MongoDB connection failed. Is the database URL correct and MongoDB accessible?")
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    client = getattr(app.state, "db_client", None)
+    if client:
+        client.close()
 
 # Configure rate limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -132,11 +89,19 @@ app.add_middleware(
 # --- Database Initialization ---
 @app.on_event("startup")
 async def startup_db_client():
-    mongo_url = "mongodb://localhost:27017"
-    db_name = "your_database_name"  # <-- set your actual DB name here
-    client = AsyncIOMotorClient(mongo_url)
-    app.state.db_client = client
-    app.state.db = client[db_name]
+    mongo_url = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+    db_name = os.getenv("DATABASE_NAME", "test")
+    try:
+        client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000)
+        # Try to force a connection on startup to fail fast if MongoDB is not running
+        await client.server_info()
+        app.state.db_client = client
+        app.state.db = client[db_name]
+    except Exception as e:
+        import sys
+        print(f"Could not connect to MongoDB at {mongo_url}: {e}", file=sys.stderr)
+        # Optionally: raise or exit to prevent app from running without DB
+        raise RuntimeError("MongoDB connection failed. Is the database URL correct and MongoDB accessible?")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
@@ -166,11 +131,19 @@ app.include_router(extra_beds.router, prefix="/api")
 app.include_router(programs.router, prefix="/api")
 app.include_router(razorpay.router, prefix="/api")
 app.include_router(api_site.router)
+from resort_backend.routes import reviews
+app.include_router(reviews.router, prefix="/api")
 # Authentication routes
 from resort_backend.routes import auth
 app.include_router(auth.router)
 from resort_backend.routes import guests
 app.include_router(guests.router)
+from resort_backend.routes import bookings
+from resort_backend.routes.dining import router as dining_router
+app.include_router(bookings.router)
+app.include_router(dining_router)
+from resort_backend.routes.contact import router as contact_router
+app.include_router(contact_router)
 
 # Serve uploaded files from /uploads
 uploads_path = os.path.join(os.path.dirname(__file__), "uploads")

@@ -7,7 +7,6 @@ import pymongo
 import asyncio
 from uuid import uuid4
 from fastapi import Depends
-from resort_backend.routes.gallery import admin_key_dep
 from resort_backend.lib.locks import acquire_lock, release_lock
 from resort_backend.utils import get_db_or_503, serialize_doc
 from resort_backend.routes.events import publish_event
@@ -58,25 +57,33 @@ async def get_all_bookings(request: Request):
     return [serialize_doc(b) for b in bookings]
 
 
+@router.get("/all")
+async def get_all_bookings_api(request: Request):
+    """Get all bookings (explicit endpoint)"""
+    db = get_db_or_503(request)
+    bookings = await db["bookings"].find().to_list(None)
+    return [serialize_doc(b) for b in bookings]
+
+
 @router.get("/{booking_id}")
 async def get_booking(request: Request, booking_id: str):
     """Get a specific booking by ID"""
     db = get_db_or_503(request)
-    try:
-        # Try to fetch by _id (ObjectId) and fallback to string id field if needed
+    booking = None
+    # Try to fetch by _id (ObjectId) and fallback to string id field if needed
+    if booking_id:
         try:
             obj_id = ObjectId(booking_id)
             booking = await db["bookings"].find_one({"_id": obj_id})
+            if booking:
+                return serialize_doc(booking)
         except Exception:
-            booking = None
-        if not booking:
-            # fallback: try by string id field (for legacy or non-ObjectId ids)
-            booking = await db["bookings"].find_one({"id": booking_id})
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid booking id")
-    if not booking:
-        raise HTTPException(status_code=404, detail="Booking not found")
-    return serialize_doc(booking)
+            pass
+        # fallback: try as string id
+        booking = await db["bookings"].find_one({"id": booking_id})
+        if booking:
+            return serialize_doc(booking)
+    raise HTTPException(status_code=404, detail="Booking not found")
 
 
 @router.get("/by-id")
@@ -357,7 +364,7 @@ async def my_bookings(request: Request):
     return [serialize_doc(b) for b in bookings]
 
 
-@router.post("/{booking_id}/release", dependencies=[Depends(admin_key_dep)])
+@router.post("/{booking_id}/release")
 async def release_occupancies_endpoint(request: Request, booking_id: str):
     """Admin-safe endpoint: release occupancies associated with a booking id."""
     db = get_db_or_503(request)
@@ -382,3 +389,21 @@ def get_db_or_503(request: Request):
     if db is None:
         raise HTTPException(status_code=503, detail="Database not initialized")
     return db
+
+
+@router.get("/dining")
+async def get_dining(request: Request):
+    """
+    Compatibility endpoint for /api/dining.
+    Returns all menu items from the 'menu' or 'menu_items' collection.
+    """
+    db = get_db_or_503(request)
+    # Try both 'menu' and 'menu_items' collections for compatibility
+    items = []
+    try:
+        items = await db["menu"].find().to_list(None)
+        if not items:
+            items = await db["menu_items"].find().to_list(None)
+    except Exception:
+        pass
+    return [serialize_doc(i) for i in items]
