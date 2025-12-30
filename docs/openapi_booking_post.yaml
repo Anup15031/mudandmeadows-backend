@@ -1,0 +1,4 @@
+# DEPRECATED: This file was consolidated into `resort_backend/openapi.yaml` during frontend API integration.
+# Please use `resort_backend/openapi.yaml` as the canonical OpenAPI contract moving forward.
+# (File retained as a pointer for historical reasons.)
+

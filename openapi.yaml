@@ -1,0 +1,525 @@
+openapi: 3.0.3
+info:
+  title: Resort Backend API (compat + core)
+  version: 1.0.0
+  description: "Machine-readable contract for the Resort Backend used by the frontend. Includes compat `/api` endpoints, admin/internal headers, and upload specs."
+servers:
+  - url: "{API_BASE}"
+    description: "Runtime server (use VITE_API_URL or REACT_APP_API_URL as API_BASE)"
+    variables:
+      API_BASE:
+        default: "http://localhost:8000"
+components:
+  securitySchemes:
+    AdminKey:
+      type: apiKey
+      in: header
+      name: X-Admin-Key
+    InternalKey:
+      type: apiKey
+      in: header
+      name: X-Internal-Key
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+    Pagination:
+      type: object
+      properties:
+        limit:
+          type: integer
+        skip:
+          type: integer
+        count:
+          type: integer
+    Room:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        capacity:
+          type: integer
+        price_per_night:
+          type: number
+        available:
+          type: boolean
+    Cottage:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        price:
+          type: number
+        capacity:
+          type: integer
+        rooms:
+          type: array
+          items:
+            $ref: '#/components/schemas/Room'
+    Booking:
+      type: object
+      properties:
+        id:
+          type: string
+        reference:
+          type: string
+        status:
+          type: string
+        allocated_cottages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Cottage'
+    Program:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+    GalleryItem:
+      type: object
+      properties:
+        id: { type: string }
+        filename: { type: string }
+        url: { type: string }
+        category: { type: string }
+        visible: { type: boolean }
+paths:
+  /home/:
+    get:
+      summary: Site home payload with featured items
+      responses:
+        '200':
+          description: Home payload
+          content:
+            application/json:
+              schema:
+                type: object
+  /home/stats:
+    get:
+      summary: Totals for counts
+      responses:
+        '200': { description: OK }
+
+  /accommodations/:
+    get:
+      summary: List accommodations
+      responses:
+        '200':
+          description: List
+          content:
+            application/json: {}
+    post:
+      summary: Create accommodation
+      requestBody:
+        required: true
+        content:
+          application/json: {}
+      responses:
+        '201': { description: Created }
+  /accommodations/{accommodation_id}:
+    get:
+      parameters:
+        - name: accommodation_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+    put:
+      parameters:
+        - name: accommodation_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody: { content: { 'application/json': {} } }
+      responses:
+        '200': { description: Updated }
+    delete:
+      parameters:
+        - name: accommodation_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204': { description: Deleted }
+
+  /packages/:
+    get:
+      summary: List packages
+      responses:
+        '200': { description: OK }
+    post:
+      requestBody: { content: { 'application/json': {} } }
+      responses: { '201': { description: Created } }
+  /packages/{package_id}:
+    get:
+      parameters: [{ name: package_id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: OK } }
+    put:
+      parameters: [{ name: package_id, in: path, required: true, schema: { type: string } }]
+      requestBody: { content: { 'application/json': {} } }
+      responses: { '200': { description: Updated } }
+    delete:
+      parameters: [{ name: package_id, in: path, required: true, schema: { type: string } }]
+      responses: { '204': { description: Deleted } }
+
+  /experiences/:
+    get:
+      summary: List experiences
+      responses: { '200': { description: OK } }
+    post:
+      requestBody: { content: { 'application/json': {} } }
+      responses: { '201': { description: Created } }
+  /experiences/{experience_id}:
+    get:
+      parameters: [{ name: experience_id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: OK } }
+    put:
+      parameters: [{ name: experience_id, in: path, required: true, schema: { type: string } }]
+      requestBody: { content: { 'application/json': {} } }
+      responses: { '200': { description: Updated } }
+    delete:
+      parameters: [{ name: experience_id, in: path, required: true, schema: { type: string } }]
+      responses: { '204': { description: Deleted } }
+
+  /wellness/:
+    get:
+      summary: List wellness
+      responses: { '200': { description: OK } }
+  /wellness/{wellness_id}:
+    get:
+      parameters: [{ name: wellness_id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: OK } }
+
+  /bookings/:
+    get:
+      summary: List bookings
+      responses: { '200': { description: OK } }
+    post:
+      summary: Create booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Booking'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+  /bookings/{booking_id}:
+    get:
+      parameters: [{ name: booking_id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: OK } }
+    put:
+      parameters: [{ name: booking_id, in: path, required: true, schema: { type: string } }]
+      requestBody: { content: { 'application/json': {} } }
+      responses: { '200': { description: Updated } }
+    delete:
+      parameters: [{ name: booking_id, in: path, required: true, schema: { type: string } }]
+      responses: { '204': { description: Deleted } }
+  /bookings/guest/{guest_email}:
+    get:
+      parameters: [{ name: guest_email, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: OK } }
+
+  /programs/:
+    get:
+      summary: List programs
+      parameters:
+        - name: tag
+          in: query
+          schema: { type: string }
+      responses: { '200': { description: OK } }
+    post:
+      requestBody: { content: { 'application/json': {} } }
+      responses: { '201': { description: Created } }
+  /programs/{program_id}:
+    get:
+      parameters: [{ name: program_id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: OK } }
+    put:
+      parameters: [{ name: program_id, in: path, required: true, schema: { type: string } }]
+      requestBody: { content: { 'application/json': {} } }
+      responses: { '200': { description: Updated } }
+    delete:
+      parameters: [{ name: program_id, in: path, required: true, schema: { type: string } }]
+      responses: { '204': { description: Deleted } }
+  /programs/recommend:
+    post:
+      summary: Recommend programs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                guestPreferences: { type: object }
+                stayDays: { type: integer }
+      responses: { '200': { description: OK } }
+
+  /navigation/:
+    get:
+      summary: Get navigation (public fallback supported)
+      parameters: [{ name: public, in: query, schema: { type: boolean } }]
+      responses: { '200': { description: OK } }
+    post:
+      requestBody: { content: { 'application/json': {} } }
+      responses: { '201': { description: Created } }
+  /navigation/{item_id}:
+    put:
+      parameters: [{ name: item_id, in: path, required: true, schema: { type: string } }]
+      requestBody: { content: { 'application/json': {} } }
+      responses: { '200': { description: Updated } }
+    delete:
+      parameters: [{ name: item_id, in: path, required: true, schema: { type: string } }]
+      responses: { '204': { description: Deleted } }
+
+  /menu-items/:
+    get:
+      summary: List menu items
+      responses: { '200': { description: OK } }
+    post:
+      requestBody: { content: { 'application/json': {} } }
+      responses: { '201': { description: Created } }
+  /menu-items/{menu_item_id}:
+    get:
+      parameters: [{ name: menu_item_id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: OK } }
+    put:
+      parameters: [{ name: menu_item_id, in: path, required: true, schema: { type: string } }]
+      requestBody: { content: { 'application/json': {} } }
+      responses: { '200': { description: Updated } }
+    delete:
+      parameters: [{ name: menu_item_id, in: path, required: true, schema: { type: string } }]
+      responses: { '204': { description: Deleted } }
+
+  /gallery/:
+    get:
+      summary: List gallery
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: visible
+          in: query
+          schema: { type: boolean }
+        - name: limit
+          in: query
+          schema: { type: integer }
+        - name: skip
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Paged gallery
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GalleryItem'
+                  count: { type: integer }
+    post:
+      summary: Upload gallery item (admin)
+      security: [{ AdminKey: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                imageUrl:
+                  type: string
+      responses:
+        '201': { description: Created }
+  /gallery/{item_id}:
+    get:
+      parameters: [{ name: item_id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: OK } }
+    put:
+      security: [{ AdminKey: [] }]
+      parameters: [{ name: item_id, in: path, required: true, schema: { type: string } }]
+      requestBody: { content: { 'application/json': {} } }
+      responses: { '200': { description: Updated } }
+    delete:
+      security: [{ AdminKey: [] }]
+      parameters: [{ name: item_id, in: path, required: true, schema: { type: string } }]
+      responses: { '204': { description: Deleted } }
+
+  /extra-beds/:
+    get:
+      responses: { '200': { description: OK } }
+  /extra-beds/{item_id}:
+    get:
+      parameters: [{ name: item_id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: OK } }
+  /extra-beds/for-accommodation/{accommodation_id}:
+    get:
+      parameters: [{ name: accommodation_id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: OK } }
+  /extra-beds/request:
+    post:
+      requestBody: { content: { 'application/json': {} } }
+      responses: { '201': { description: Created } }
+
+  /api/events/stream:
+    get:
+      summary: Server-Sent Events stream for runtime notifications
+      responses:
+        '200':
+          description: SSE stream
+          content: {}
+
+  /api/site/site-config.js:
+    get:
+      summary: JS payload
+      responses: { '200': { description: OK, content: { 'application/javascript': {} } } }
+
+  /api/cottages:
+    get:
+      summary: Compat cottages endpoint
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer }
+        - name: limit
+          in: query
+          schema: { type: integer }
+      responses: { '200': { description: OK } }
+  /api/cottages/{cottage_id}:
+    get:
+      parameters: [{ name: cottage_id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: OK } }
+
+  /api/bookings:
+    post:
+      summary: Create a booking
+      tags:
+        - bookings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - guest_name
+                - guest_email
+                - guests
+                - check_in
+                - check_out
+              properties:
+                guest_name:
+                  type: string
+                guest_email:
+                  type: string
+                  format: email
+                guest_phone:
+                  type: string
+                guests:
+                  type: integer
+                  minimum: 1
+                selected_cottages:
+                  type: array
+                  items:
+                    type: string
+                    description: MongoDB _id of preferred cottage
+                check_in:
+                  type: string
+                  format: date
+                check_out:
+                  type: string
+                  format: date
+                allow_extra_beds:
+                  type: boolean
+                preferred_room_types:
+                  type: array
+                  items:
+                    type: string
+                price_breakdown:
+                  type: object
+                  additionalProperties: true
+                special_requests:
+                  type: string
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  reference:
+                    type: string
+                  status:
+                    type: string
+                  allocated_cottages:
+                    type: array
+                    items:
+                      type: string
+                  price_breakdown:
+                    type: object
+                    additionalProperties: true
+        '400':
+          description: Validation error or no availability
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '409':
+          description: Conflict (allocation race)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '503':
+          description: DB unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+
+  /internal/db-status:
+    get:
+      summary: Internal DB status
+      security: [{ InternalKey: [] }]
+      responses: { '200': { description: OK } }
+
+security: []
