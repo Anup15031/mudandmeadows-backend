@@ -49,9 +49,17 @@ class Wellness(BaseModel):
     description: str
     price: float
     duration_minutes: int
+    days: Optional[int] = None
     benefits: list[str] = []
     images: list[str] = []
     rating: float
+    inclusions: Optional[list[str]] = None
+    diet: Optional[dict] = None  # {type: str, description: str}
+    case_study: Optional[str] = None
+    comprehensive_sessions: Optional[int] = None
+    attention_sessions: Optional[int] = None
+    wellness_consultation: Optional[str] = None
+    notes: Optional[str] = None
     created_at: Optional[datetime] = None
 
 class Booking(BaseModel):
