@@ -1,10 +1,26 @@
+
 from fastapi import APIRouter, HTTPException, Request, Depends, Form, File, UploadFile
 from fastapi.responses import JSONResponse
+
 from pydantic import BaseModel
 from typing import Optional
 from resort_backend.utils import get_db_or_503, serialize_doc
+from datetime import datetime
+import os
+from bson import ObjectId
 
-router = APIRouter(prefix="/api", tags=["gallery"])
+
+router = APIRouter(tags=["gallery"])
+
+
+class GalleryCreateRequest(BaseModel):
+    title: Optional[str] = None
+    caption: Optional[str] = None
+    description: Optional[str] = None
+    type: Optional[str] = None
+    category: Optional[str] = None
+    url: Optional[str] = None
+    visible: Optional[bool] = True
 
 class GalleryItemResponse(BaseModel):
     id: str
@@ -39,7 +55,8 @@ async def get_gallery(request: Request, category: str = None, visible: Optional[
         doc["title"] = doc.get("title")
         doc["caption"] = doc.get("caption")
         doc["description"] = doc.get("description")
-        doc["url"] = doc.get("url")
+        # Prefer explicit url field, fallback to imageUrl if present
+        doc["url"] = doc.get("url") or doc.get("imageUrl") or doc.get("image_url")
         doc["type"] = doc.get("type")
         doc["category"] = doc.get("category")
         doc["visible"] = doc.get("visible", True)
@@ -116,33 +133,6 @@ async def get_gallery_item(request: Request, item_id: str):
     return serialize_doc(doc)
 
 
-@router.post("/")
-async def create_gallery_item(request: Request, imageUrl: Optional[str] = Form(None), file: Optional[UploadFile] = File(None), caption: Optional[str] = Form(None), category: Optional[str] = Form(None), isVisible: bool = Form(True)):
-    db = get_db_or_503(request)
-    final_url = imageUrl
-    if file is not None:
-        # save file
-        filename = f"{int(datetime.utcnow().timestamp())}_{file.filename}"
-        dest = os.path.join(UPLOAD_DIR, filename)
-        with open(dest, "wb") as f:
-            f.write(await file.read())
-        # public path served at /uploads/gallery/<filename>
-        final_url = f"/uploads/gallery/{filename}"
-
-    if not final_url:
-        raise HTTPException(status_code=400, detail="imageUrl or file required")
-
-    doc = {
-        "imageUrl": final_url,
-        "caption": caption,
-        "category": category,
-        "isVisible": bool(isVisible),
-        "createdAt": datetime.utcnow(),
-        "updatedAt": datetime.utcnow()
-    }
-    res = await db.gallery.insert_one(doc)
-    doc["_id"] = res.inserted_id
-    return serialize_doc(doc)
 
 
 @router.put("/{item_id}")
@@ -152,8 +142,10 @@ async def update_gallery_item(request: Request, item_id: str, payload: dict):
     # do not allow _id changes
     payload.pop("id", None)
     payload.pop("_id", None)
+    # Allow updating the url field
+    update_fields = {k: v for k, v in payload.items() if k in ["title", "caption", "description", "type", "category", "visible", "url", "image_url", "imageUrl"]}
     try:
-        res = await db.gallery.update_one({"_id": ObjectId(item_id)}, {"$set": payload})
+        res = await db.gallery.update_one({"_id": ObjectId(item_id)}, {"$set": update_fields})
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid id")
     if res.matched_count == 0:
@@ -172,3 +164,27 @@ async def delete_gallery_item(request: Request, item_id: str):
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Not found")
     return {"deleted": True}
+
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), '../../uploads/gallery')
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+
+@router.post("/gallery", response_model=GalleryItemResponse)
+async def create_gallery_item_json(data: GalleryCreateRequest, request: Request):
+    db = get_db_or_503(request)
+    doc = data.dict()
+    doc["createdAt"] = datetime.utcnow()
+    doc["updatedAt"] = datetime.utcnow()
+    # For compatibility, also set imageUrl/image_url fields if url is present
+    if doc.get("url"):
+        doc["imageUrl"] = doc["url"]
+        doc["image_url"] = doc["url"]
+        # Auto-detect video by file extension if type is not set
+        video_exts = [".mp4", ".webm", ".ogg", ".mov", ".avi", ".mkv"]
+        url_lower = doc["url"].lower()
+        if not doc.get("type") and any(url_lower.endswith(ext) for ext in video_exts):
+            doc["type"] = "video"
+    res = await db.gallery.insert_one(doc)
+    doc["_id"] = res.inserted_id
+    return serialize_doc(doc)

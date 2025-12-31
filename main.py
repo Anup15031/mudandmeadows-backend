@@ -24,7 +24,7 @@ for env_path in env_paths:
         break
 import resort_backend.database as database
 from resort_backend.database import connect_db, close_db, get_db
-from resort_backend.routes import accommodations, packages, experiences, wellness, bookings, home, menu_items, gallery, api_compat, internal_status, navigation, api_site
+from resort_backend.routes import accommodations, packages, experiences, wellness, bookings, home, gallery, api_compat, internal_status, navigation, api_site
 from resort_backend.routes import events, extra_beds, programs
 from resort_backend.routes import razorpay
 from fastapi.staticfiles import StaticFiles
@@ -122,7 +122,6 @@ app.include_router(wellness.router, prefix="/api")
 app.include_router(bookings.router, prefix="/api")
 app.include_router(api_compat.router, prefix="/api")
 app.include_router(api_site.router, prefix="/api")
-app.include_router(menu_items.router, prefix="/api")
 app.include_router(gallery.router, prefix="/api")
 app.include_router(navigation.router, prefix="/api")
 app.include_router(internal_status.router, prefix="/api")

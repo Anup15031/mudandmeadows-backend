@@ -1,11 +1,79 @@
 from fastapi import APIRouter, HTTPException, Request, Query
-from resort_backend.models import Accommodation
+from pydantic import BaseModel
 from bson import ObjectId
 from datetime import datetime
 from resort_backend.utils import get_db_or_503, serialize_doc
 from typing import Optional
 
 router = APIRouter(prefix="/cottages", tags=["cottages"])
+
+# Pydantic model for cottage
+class CottageModel(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: Optional[float] = None
+    images: Optional[list[str]] = None  # List of image URLs
+    amenities: Optional[list[str]] = None
+    size: Optional[float] = None  # in sqm
+    view: Optional[str] = None
+    guests: Optional[int] = None
+    available: Optional[bool] = True
+    maintenance: Optional[bool] = False
+
+class CottageUpdateModel(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    images: Optional[list[str]] = None
+    amenities: Optional[list[str]] = None
+    size: Optional[float] = None
+    view: Optional[str] = None
+    guests: Optional[int] = None
+    available: Optional[bool] = None
+    maintenance: Optional[bool] = None
+
+@router.get("/all")
+async def get_all_cottages_admin(request: Request):
+    db = get_db_or_503(request)
+    try:
+        cottages = await db["cottages"].find().to_list(None)
+        return [serialize_doc(c) for c in cottages]
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to fetch cottages")
+
+@router.post("/add", status_code=201)
+async def create_cottage(request: Request, cottage: CottageModel):
+    db = get_db_or_503(request)
+    try:
+        result = await db["cottages"].insert_one(cottage.dict())
+        new_cottage = await db["cottages"].find_one({"_id": result.inserted_id})
+        return serialize_doc(new_cottage)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+@router.put("/{cottage_id}")
+async def update_cottage(request: Request, cottage_id: str, cottage: CottageUpdateModel):
+    db = get_db_or_503(request)
+    try:
+        update_data = {k: v for k, v in cottage.dict().items() if v is not None}
+        result = await db["cottages"].update_one({"_id": ObjectId(cottage_id)}, {"$set": update_data})
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Cottage not found.")
+        updated_cottage = await db["cottages"].find_one({"_id": ObjectId(cottage_id)})
+        return serialize_doc(updated_cottage)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+@router.delete("/{cottage_id}", status_code=204)
+async def delete_cottage(request: Request, cottage_id: str):
+    db = get_db_or_503(request)
+    try:
+        result = await db["cottages"].delete_one({"_id": ObjectId(cottage_id)})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Cottage not found.")
+        return
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 @router.get("/")
 async def get_all_cottages(
