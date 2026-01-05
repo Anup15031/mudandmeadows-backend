@@ -3,7 +3,7 @@ from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from typing import Optional, List
 
-from resort_backend.utils import get_db_or_503
+from utils import get_db_or_503
 
 router = APIRouter(tags=["contact"])
 

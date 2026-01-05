@@ -7,7 +7,7 @@ import hmac
 import hashlib
 import json
 import logging
-from resort_backend.database import get_db
+from database import get_db
 from pydantic import BaseModel, Field
 import os
 import razorpay

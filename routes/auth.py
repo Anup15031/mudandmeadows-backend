@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 from uuid import uuid4
 import jwt
-from resort_backend.utils import get_db_or_503, hash_password, verify_password, serialize_doc
+from utils import get_db_or_503, hash_password, verify_password, serialize_doc
 import os
 from urllib.parse import urlencode
 import httpx

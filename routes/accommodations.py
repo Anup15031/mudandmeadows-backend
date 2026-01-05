@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, Request
-from resort_backend.models import Accommodation
+from models import Accommodation
 from bson import ObjectId
 from datetime import datetime
-from resort_backend.utils import get_db_or_503, serialize_doc
-from resort_backend.routes.events import publish_event
+from utils import get_db_or_503, serialize_doc
+from routes.events import publish_event
 
 router = APIRouter(tags=["accommodations"])
 

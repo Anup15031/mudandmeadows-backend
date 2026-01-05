@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Request, HTTPException, Depends
 from datetime import datetime, timedelta
-from resort_backend.lib.locks import acquire_lock, release_lock
+from lib.locks import acquire_lock, release_lock
 from bson import ObjectId
-from resort_backend.utils import get_db_or_503, serialize_doc
+from utils import get_db_or_503, serialize_doc
 import pymongo
 import os
 from lib import ota_adapters
-from resort_backend.lib.webhooks import verify_hmac_sha256
-from resort_backend.routes.gallery import admin_key_dep
+from lib.webhooks import verify_hmac_sha256
+from routes.gallery import admin_key_dep
 
 router = APIRouter(tags=["ota"])
 

@@ -1,6 +1,6 @@
 
 from fastapi import APIRouter, HTTPException, Request
-from resort_backend.utils import get_db_or_503, serialize_doc
+from utils import get_db_or_503, serialize_doc
 from pydantic import BaseModel
 from typing import Optional
 from bson import ObjectId
@@ -31,7 +31,7 @@ class MenuItemUpdate(BaseModel):
     amenities: Optional[list[str]] = None
     available: Optional[bool] = None
 
-@router.get("/dining/all")
+@router.get("/all")
 async def get_dining(request: Request):
     """
     Returns all menu items from the 'menu' collection in MongoDB.
@@ -45,7 +45,7 @@ async def get_dining(request: Request):
         raise HTTPException(status_code=404, detail="No menu items found in 'menu' collection.")
     return [serialize_doc(i) for i in items]
 
-@router.post("/dining", status_code=201)
+@router.post("/", status_code=201)
 async def create_menu_item(request: Request, item: MenuItem):
     db = get_db_or_503(request)
     try:
@@ -55,7 +55,7 @@ async def create_menu_item(request: Request, item: MenuItem):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-@router.put("/dining/{item_id}")
+@router.put("/{item_id}")
 async def update_menu_item(request: Request, item_id: str, item: MenuItemUpdate):
     db = get_db_or_503(request)
     try:
@@ -68,7 +68,7 @@ async def update_menu_item(request: Request, item_id: str, item: MenuItemUpdate)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-@router.delete("/dining/{item_id}", status_code=204)
+@router.delete("/{item_id}", status_code=204)
 async def delete_menu_item(request: Request, item_id: str):
     db = get_db_or_503(request)
     try:

@@ -2,12 +2,12 @@ from fastapi import APIRouter, HTTPException, Request, Body
 from bson import ObjectId
 from datetime import datetime
 from typing import List, Dict, Any
-from resort_backend.utils import get_db_or_503, serialize_doc
+from utils import get_db_or_503, serialize_doc
 import os
 import logging
 
 logger = logging.getLogger("resort_backend.programs")
-from resort_backend.models import Program
+from models import Program
 
 router = APIRouter(tags=["programs"])
 

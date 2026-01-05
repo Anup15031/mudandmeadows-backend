@@ -6,9 +6,9 @@ from datetime import datetime, timedelta
 from typing import List, Union, Optional
 import pymongo
 from uuid import uuid4
-from resort_backend.utils import get_db_or_503, serialize_doc
-from resort_backend.lib.locks import acquire_lock, release_lock
-from resort_backend.routes.events import publish_event
+from utils import get_db_or_503, serialize_doc
+from lib.locks import acquire_lock, release_lock
+from routes.events import publish_event
 
 
 router = APIRouter(tags=["bookings"])

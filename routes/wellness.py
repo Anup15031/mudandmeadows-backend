@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Request
-from resort_backend.models import Wellness
+from models import Wellness
 from bson import ObjectId
 from datetime import datetime
-from resort_backend.utils import get_db_or_503, serialize_doc
+from utils import get_db_or_503, serialize_doc
 
 router = APIRouter(tags=["wellness"])
 

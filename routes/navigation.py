@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, HTTPException
-from resort_backend.utils import get_db_or_503, serialize_doc
+from utils import get_db_or_503, serialize_doc
 from bson import ObjectId
 from datetime import datetime
 import logging

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, Request
 from bson import ObjectId
 from datetime import datetime
-from resort_backend.utils import get_db_or_503, serialize_doc
-from resort_backend.models import ExtraBedRequest
-from resort_backend.routes.events import publish_event
+from utils import get_db_or_503, serialize_doc
+from models import ExtraBedRequest
+from routes.events import publish_event
 
 router = APIRouter(tags=["extra-beds"])
 

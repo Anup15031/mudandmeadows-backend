@@ -1,5 +1,5 @@
-from resort_backend.routes import cottages
-from resort_backend.routes import bookings
+from routes import cottages
+from routes import bookings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter
@@ -10,8 +10,9 @@ import logging
 from dotenv import load_dotenv
 import os
 from datetime import datetime
-from resort_backend.routes import api_site
+from routes import api_site
 
+from routes import api_site
 from pathlib import Path
 # Ensure .env is loaded before importing route modules so route-level
 # module-scope env reads (e.g. INTERNAL_API_KEY) pick up values.
@@ -23,11 +24,11 @@ for env_path in env_paths:
     if env_path.exists():
         load_dotenv(env_path)
         break
-import resort_backend.database as database
-from resort_backend.database import connect_db, close_db, get_db
-from resort_backend.routes import accommodations, packages, experiences, wellness, bookings, home, gallery, api_compat, internal_status, navigation, api_site
-from resort_backend.routes import events, extra_beds, programs
-from resort_backend.routes import razorpay
+import database as database
+from database import connect_db, close_db, get_db
+from routes import accommodations, packages, experiences, wellness, bookings, home, gallery, api_compat, internal_status, navigation, api_site
+from routes import events, extra_beds, programs
+from routes import razorpay
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import Response
 import json
@@ -123,7 +124,7 @@ app.include_router(experiences.router, prefix="/api/experiences")
 app.include_router(wellness.router, prefix="/api/wellness")
 app.include_router(bookings.router, prefix="/api/bookings")
 app.include_router(api_compat.router, prefix="/api/api_compat")
-app.include_router(api_site.router, prefix="/api/api_site")
+app.include_router(api_site.router, prefix="/api/site")
 app.include_router(gallery.router, prefix="/api/gallery")
 app.include_router(navigation.router, prefix="/api/navigation")
 app.include_router(internal_status.router, prefix="/api/internal_status")
@@ -131,17 +132,18 @@ app.include_router(events.router, prefix="/api/events")
 app.include_router(extra_beds.router, prefix="/api/extra_beds")
 app.include_router(programs.router, prefix="/api/programs")
 app.include_router(razorpay.router, prefix="/api/razorpay")
-from resort_backend.routes import reviews
+from routes import reviews
 app.include_router(reviews.router, prefix="/api/reviews")
 # Authentication routes
-from resort_backend.routes import auth
+from routes import auth
 app.include_router(auth.router, prefix="/api/auth")
-from resort_backend.routes import guests
+from routes import guests
 app.include_router(guests.router, prefix="/api/guests")
-from resort_backend.routes.dining import router as dining_router
+from routes.dining import router as dining_router
 app.include_router(dining_router, prefix="/api/dining")
-from resort_backend.routes.contact import router as contact_router
+from routes.contact import router as contact_router
 app.include_router(contact_router, prefix="/api/contact")
+from routes import experience_journey
 
 # Serve uploaded files from /uploads
 uploads_path = os.path.join(os.path.dirname(__file__), "uploads")

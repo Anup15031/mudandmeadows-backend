@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 
 from pydantic import BaseModel
 from typing import Optional
-from resort_backend.utils import get_db_or_503, serialize_doc
+from utils import get_db_or_503, serialize_doc
 from datetime import datetime
 import os
 from bson import ObjectId

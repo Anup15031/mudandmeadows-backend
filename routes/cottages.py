@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Request, Query
 from pydantic import BaseModel
 from bson import ObjectId
 from datetime import datetime
-from resort_backend.utils import get_db_or_503, serialize_doc
+from utils import get_db_or_503, serialize_doc
 from typing import Optional
 
 router = APIRouter(tags=["cottages"])

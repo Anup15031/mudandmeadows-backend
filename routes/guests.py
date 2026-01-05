@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
-from resort_backend.utils import get_db_or_503, serialize_doc, hash_password
+from utils import get_db_or_503, serialize_doc, hash_password
 
 router = APIRouter(tags=["guests"])
 

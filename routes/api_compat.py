@@ -6,7 +6,7 @@ from fastapi.responses import PlainTextResponse
 from typing import Optional, List
 from collections import Counter
 from datetime import datetime
-from resort_backend.utils import get_db_or_503, serialize_doc
+from utils import get_db_or_503, serialize_doc
 from bson import ObjectId
 from pydantic import BaseModel
 import itertools
@@ -902,7 +902,7 @@ async def debug_counts(request: Request):
 
     out = serialize_doc(created)
     try:
-        from resort_backend.routes.events import publish_event
+        from routes.events import publish_event
         publish_event({"event": "bookings.created", "payload": {"id": out.get("id"), "reference": out.get("reference"), "status": out.get("status")}})
     except Exception:
         pass
