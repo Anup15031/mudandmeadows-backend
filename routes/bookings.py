@@ -1,67 +1,74 @@
+
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
-from typing import List, Union
+from pydantic import BaseModel, Field
 from bson import ObjectId
 from datetime import datetime, timedelta
+from typing import List, Union, Optional
 import pymongo
-import asyncio
 from uuid import uuid4
-from fastapi import Depends
-from resort_backend.lib.locks import acquire_lock, release_lock
 from resort_backend.utils import get_db_or_503, serialize_doc
+from resort_backend.lib.locks import acquire_lock, release_lock
 from resort_backend.routes.events import publish_event
 
-router = APIRouter(prefix="/bookings", tags=["bookings"])
+
+router = APIRouter(tags=["bookings"])
 
 # Define a local BookingCreateRequest model for POST and BookingUpdateRequest for PUT
+
 class BookingCreateRequest(BaseModel):
-    guest_name: str
-    guest_email: str
-    guest_phone: str
-    address: str
-    city: str
-    postal_code: str
-    country: str
-    accommodation_id: Union[str, List[str]]
-    check_in: str
-    check_out: str
-    total_price: float
-    payment_method: str = None
-    guests: int = None
-    adults: int = None
-    children: int = None
+    """Model for creating a booking."""
+    guest_name: str = Field(..., description="Guest's full name")
+    guest_email: str = Field(..., description="Guest's email address")
+    guest_phone: str = Field(..., description="Guest's phone number")
+    address: str = Field(..., description="Guest's address")
+    city: str = Field(..., description="City")
+    postal_code: str = Field(..., description="Postal code")
+    country: str = Field(..., description="Country")
+    accommodation_id: Union[str, List[str]] = Field(..., description="Accommodation ID(s)")
+    check_in: str = Field(..., description="Check-in date (YYYY-MM-DD)")
+    check_out: str = Field(..., description="Check-out date (YYYY-MM-DD)")
+    total_price: float = Field(..., description="Total price")
+    payment_method: Optional[str] = Field(None, description="Payment method")
+    guests: Optional[int] = Field(None, description="Total guests")
+    adults: Optional[int] = Field(None, description="Number of adults")
+    children: Optional[int] = Field(None, description="Number of children")
+
 
 class BookingUpdateRequest(BaseModel):
-    guest_name: str = None
-    guest_email: str = None
-    guest_phone: str = None
-    address: str = None
-    city: str = None
-    postal_code: str = None
-    country: str = None
-    accommodation_id: Union[str, List[str], None] = None
-    check_in: str = None
-    check_out: str = None
-    total_price: float = None
-    payment_method: str = None
-    guests: int = None
-    adults: int = None
-    children: int = None
+    """Model for updating a booking."""
+    guest_name: Optional[str] = None
+    guest_email: Optional[str] = None
+    guest_phone: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    postal_code: Optional[str] = None
+    country: Optional[str] = None
+    accommodation_id: Optional[Union[str, List[str]]] = None
+    check_in: Optional[str] = None
+    check_out: Optional[str] = None
+    total_price: Optional[float] = None
+    payment_method: Optional[str] = None
+    guests: Optional[int] = None
+    adults: Optional[int] = None
+    children: Optional[int] = None
 
 
-@router.get("/")
+class MenuItem(BaseModel):
+    """Model for a menu item added to a booking."""
+    name: str
+    qty: int
+    price: float
+
+
+
+@router.get("/", response_model=List[dict], summary="Get all bookings")
 async def get_all_bookings(request: Request):
-    """Get all bookings"""
+    """Return all bookings with extraBeds and cottage fields for frontend compatibility."""
     db = get_db_or_503(request)
     bookings = await db["bookings"].find().to_list(None)
-    return [serialize_doc(b) for b in bookings]
-
-
-@router.get("/all")
-async def get_all_bookings_api(request: Request):
-    """Get all bookings (explicit endpoint)"""
-    db = get_db_or_503(request)
-    bookings = await db["bookings"].find().to_list(None)
+    for b in bookings:
+        b.setdefault("extraBeds", 0)
+        b.setdefault("cottage", "")
     return [serialize_doc(b) for b in bookings]
 
 
@@ -86,30 +93,19 @@ async def get_booking(request: Request, booking_id: str):
     raise HTTPException(status_code=404, detail="Booking not found")
 
 
-@router.get("/by-id")
-async def get_booking_by_query(request: Request, booking_id: str):
-    """Get a specific booking by ID (query param)"""
-    db = get_db_or_503(request)
-    booking = None
-    if booking_id:
-        try:
-            obj_id = ObjectId(booking_id)
-            booking = await db["bookings"].find_one({"_id": obj_id})
-            if booking:
-                return serialize_doc(booking)
-        except Exception:
-            pass
-        # fallback: try as string id
-        booking = await db["bookings"].find_one({"id": booking_id})
-        if booking:
-            return serialize_doc(booking)
-    raise HTTPException(status_code=404, detail="Booking not found")
+
+## Removed duplicate get_booking_by_query endpoint. Use /bookings/{booking_id} instead.
 
 
 @router.post("/")
 async def create_booking(request: Request, booking: BookingCreateRequest):
     db = get_db_or_503(request)
     booking_dict = booking.dict()
+    # Ensure extraBeds and cottage fields
+    if "extraBeds" not in booking_dict:
+        booking_dict["extraBeds"] = 0
+    if "cottage" not in booking_dict:
+        booking_dict["cottage"] = ""
     booking_dict["created_at"] = datetime.utcnow()
     # Normalize accommodation_id to always be a list
     acc_ids = booking_dict["accommodation_id"]
@@ -301,6 +297,10 @@ async def update_booking(request: Request, booking_id: str, booking: BookingUpda
     """Update a booking"""
     db = get_db_or_503(request)
     update_data = {k: v for k, v in booking.dict().items() if v is not None}
+    if "extraBeds" not in update_data:
+        update_data["extraBeds"] = 0
+    if "cottage" not in update_data:
+        update_data["cottage"] = ""
     # Normalize accommodation_id to always be a list if present
     if "accommodation_id" in update_data:
         acc_ids = update_data["accommodation_id"]
@@ -376,34 +376,83 @@ async def release_occupancies_endpoint(request: Request, booking_id: str):
     return {"released": int(res.deleted_count)}
 
 
-def get_db_or_503(request: Request):
-    # Try to get db from request.app.state, fallback to raise 503 if not present
-    db = getattr(request.app.state, "db", None)
-    if db is None:
-        # Try common alternatives for FastAPI MongoDB initialization
-        db = getattr(request.app, "db", None)
-    if db is None:
-        db_client = getattr(request.app.state, "db_client", None)
-        if db_client is not None:
-            db = db_client.get_default_database() if hasattr(db_client, "get_default_database") else None
-    if db is None:
-        raise HTTPException(status_code=503, detail="Database not initialized")
-    return db
+    # ...existing code...
 
 
-@router.get("/dining")
-async def get_dining(request: Request):
-    """
-    Compatibility endpoint for /api/dining.
-    Returns all menu items from the 'menu' or 'menu_items' collection.
-    """
+    # ...existing code...
+
+
+@router.post("/{booking_id}/cancel")
+async def cancel_booking(request: Request, booking_id: str):
     db = get_db_or_503(request)
-    # Try both 'menu' and 'menu_items' collections for compatibility
-    items = []
     try:
-        items = await db["menu"].find().to_list(None)
-        if not items:
-            items = await db["menu_items"].find().to_list(None)
-    except Exception:
-        pass
-    return [serialize_doc(i) for i in items]
+        result = await db["bookings"].update_one({"_id": ObjectId(booking_id)}, {"$set": {"status": "cancelled"}})
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Booking not found.")
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.post("/{booking_id}/checkout")
+async def checkout_booking(request: Request, booking_id: str):
+    db = get_db_or_503(request)
+    try:
+        result = await db["bookings"].update_one({"_id": ObjectId(booking_id)}, {"$set": {"status": "checked_out"}})
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Booking not found.")
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.post("/{booking_id}/menu")
+async def add_menu_item(request: Request, booking_id: str, item: MenuItem):
+    db = get_db_or_503(request)
+    try:
+        result = await db["bookings"].update_one(
+            {"_id": ObjectId(booking_id)},
+            {"$push": {"menuItems": item.dict()}})
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Booking not found.")
+        booking = await db["bookings"].find_one({"_id": ObjectId(booking_id)})
+        total = sum(i["qty"] * i["price"] for i in booking.get("menuItems", []))
+        await db["bookings"].update_one({"_id": ObjectId(booking_id)}, {"$set": {"total": total}})
+        updated_booking = await db["bookings"].find_one({"_id": ObjectId(booking_id)})
+        return serialize_doc(updated_booking)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.get("/{booking_id}/bill")
+async def get_booking_bill(request: Request, booking_id: str):
+    db = get_db_or_503(request)
+    try:
+        booking = await db["bookings"].find_one({"_id": ObjectId(booking_id)})
+        if not booking:
+            raise HTTPException(status_code=404, detail="Booking not found.")
+        items_html = ""
+        for item in booking.get("menuItems", []):
+            items_html += f"<tr><td>{item['name']}</td><td>{item['qty']}</td><td>{item['price']}</td><td>{item['qty']*item['price']}</td></tr>"
+        html = f"""
+        <html>
+        <head><title>Bill</title></head>
+        <body>
+        <h2>Booking Bill</h2>
+        <p><b>Guest:</b> {booking.get('guestName')}</p>
+        <p><b>Phone:</b> {booking.get('phone')}</p>
+        <p><b>Cottage:</b> {booking.get('cottage')}</p>
+        <p><b>Check-In:</b> {booking.get('checkIn')}</p>
+        <p><b>Check-Out:</b> {booking.get('checkOut')}</p>
+        <table border="1" cellpadding="6" style="border-collapse:collapse;">
+          <tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+          {items_html}
+        </table>
+        <h3>Total: ₹{booking.get('total', 0)}</h3>
+        </body>
+        </html>
+        """
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(content=html)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")

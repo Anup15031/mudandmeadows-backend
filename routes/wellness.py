@@ -4,7 +4,7 @@ from bson import ObjectId
 from datetime import datetime
 from resort_backend.utils import get_db_or_503, serialize_doc
 
-router = APIRouter(prefix="/wellness", tags=["wellness"])
+router = APIRouter(tags=["wellness"])
 
 @router.get("/")
 async def get_all_wellness(request: Request):

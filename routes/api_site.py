@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, HTTPException
 from resort_backend.utils import get_db_or_503, serialize_doc
 
-router = APIRouter(prefix="/api", tags=["site"])
+router = APIRouter(tags=["site"])
 
 
 @router.get("/site")

@@ -5,7 +5,7 @@ from typing import Optional, List
 
 from resort_backend.utils import get_db_or_503
 
-router = APIRouter(prefix="/api", tags=["contact"])
+router = APIRouter(tags=["contact"])
 
 class ContactInfo(BaseModel):
     location: Optional[str] = None

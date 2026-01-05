@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 
-router = APIRouter(prefix="/api", tags=["events"])
+router = APIRouter(tags=["events"])
 
 logger = logging.getLogger("resort_backend.events")
 

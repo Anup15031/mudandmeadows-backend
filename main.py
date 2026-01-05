@@ -1,4 +1,5 @@
 from resort_backend.routes import cottages
+from resort_backend.routes import bookings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter
@@ -113,36 +114,34 @@ async def shutdown_db_client():
 # Also include navigation router under /api for backwards compatibility with some clients
 # Include gallery under /api for compatibility with clients expecting /api/gallery
 # Expose extra beds under /api for frontend compatibility
-app.include_router(cottages.router, prefix="/api")
-app.include_router(home.router, prefix="/api")
-app.include_router(accommodations.router, prefix="/api")
-app.include_router(packages.router, prefix="/api")
-app.include_router(experiences.router, prefix="/api")
-app.include_router(wellness.router, prefix="/api")
-app.include_router(bookings.router, prefix="/api")
-app.include_router(api_compat.router, prefix="/api")
-app.include_router(api_site.router, prefix="/api")
-app.include_router(gallery.router, prefix="/api")
-app.include_router(navigation.router, prefix="/api")
-app.include_router(internal_status.router, prefix="/api")
-app.include_router(events.router, prefix="/api")
-app.include_router(extra_beds.router, prefix="/api")
-app.include_router(programs.router, prefix="/api")
-app.include_router(razorpay.router, prefix="/api")
-app.include_router(api_site.router)
+
+app.include_router(cottages.router, prefix="/api/cottages")
+app.include_router(home.router, prefix="/api/home")
+app.include_router(accommodations.router, prefix="/api/accommodations")
+app.include_router(packages.router, prefix="/api/packages")
+app.include_router(experiences.router, prefix="/api/experiences")
+app.include_router(wellness.router, prefix="/api/wellness")
+app.include_router(bookings.router, prefix="/api/bookings")
+app.include_router(api_compat.router, prefix="/api/api_compat")
+app.include_router(api_site.router, prefix="/api/api_site")
+app.include_router(gallery.router, prefix="/api/gallery")
+app.include_router(navigation.router, prefix="/api/navigation")
+app.include_router(internal_status.router, prefix="/api/internal_status")
+app.include_router(events.router, prefix="/api/events")
+app.include_router(extra_beds.router, prefix="/api/extra_beds")
+app.include_router(programs.router, prefix="/api/programs")
+app.include_router(razorpay.router, prefix="/api/razorpay")
 from resort_backend.routes import reviews
-app.include_router(reviews.router, prefix="/api")
+app.include_router(reviews.router, prefix="/api/reviews")
 # Authentication routes
 from resort_backend.routes import auth
-app.include_router(auth.router)
+app.include_router(auth.router, prefix="/api/auth")
 from resort_backend.routes import guests
-app.include_router(guests.router)
-from resort_backend.routes import bookings
+app.include_router(guests.router, prefix="/api/guests")
 from resort_backend.routes.dining import router as dining_router
-app.include_router(bookings.router)
-app.include_router(dining_router)
+app.include_router(dining_router, prefix="/api/dining")
 from resort_backend.routes.contact import router as contact_router
-app.include_router(contact_router)
+app.include_router(contact_router, prefix="/api/contact")
 
 # Serve uploaded files from /uploads
 uploads_path = os.path.join(os.path.dirname(__file__), "uploads")

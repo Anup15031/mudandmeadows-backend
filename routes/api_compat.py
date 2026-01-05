@@ -16,7 +16,7 @@ import re
 import json
 import logging
 
-router = APIRouter(prefix="/api", tags=["api_compat"])
+router = APIRouter(tags=["api_compat"])
 logger = logging.getLogger(__name__)
 
 

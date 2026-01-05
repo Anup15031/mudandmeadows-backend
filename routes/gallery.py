@@ -35,7 +35,7 @@ class GalleryItemResponse(BaseModel):
     created_at: Optional[str] = None
 
 # FIX: Register the route as "/gallery" (no trailing slash)
-@router.get("/gallery", response_model=list[GalleryItemResponse])
+@router.get("/", response_model=list[GalleryItemResponse])
 async def get_gallery(request: Request, category: str = None, visible: Optional[bool] = None):
     """
     Returns all gallery items (images and videos) in a consistent format.
@@ -170,7 +170,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 
-@router.post("/gallery", response_model=GalleryItemResponse)
+@router.post("/", response_model=GalleryItemResponse)
 async def create_gallery_item_json(data: GalleryCreateRequest, request: Request):
     db = get_db_or_503(request)
     doc = data.dict()

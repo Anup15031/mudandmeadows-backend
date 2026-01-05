@@ -9,7 +9,7 @@ from lib import ota_adapters
 from resort_backend.lib.webhooks import verify_hmac_sha256
 from resort_backend.routes.gallery import admin_key_dep
 
-router = APIRouter(prefix="/ota", tags=["ota"])
+router = APIRouter(tags=["ota"])
 
 
 @router.post("/webhook")

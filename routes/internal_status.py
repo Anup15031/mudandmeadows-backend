@@ -13,7 +13,7 @@ from pydantic import BaseModel
 import os
 import asyncio
 
-router = APIRouter(prefix="/internal", tags=["internal"])
+router = APIRouter(tags=["internal"])
 
 class DBStatus(BaseModel):
     status: str

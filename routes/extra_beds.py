@@ -5,7 +5,7 @@ from resort_backend.utils import get_db_or_503, serialize_doc
 from resort_backend.models import ExtraBedRequest
 from resort_backend.routes.events import publish_event
 
-router = APIRouter(prefix="/extra-beds", tags=["extra-beds"])
+router = APIRouter(tags=["extra-beds"])
 
 
 @router.get("/")

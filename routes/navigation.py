@@ -4,7 +4,7 @@ from bson import ObjectId
 from datetime import datetime
 import logging
 
-router = APIRouter(prefix="/navigation", tags=["navigation"])
+router = APIRouter(tags=["navigation"])
 
 
 @router.get("/")

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request
 from resort_backend.models import HomePage
 from resort_backend.utils import get_db_or_503, serialize_doc
 
-router = APIRouter(prefix="/home", tags=["home"])
+router = APIRouter(tags=["home"])
 
 
 @router.get("/")

@@ -5,7 +5,7 @@ from datetime import datetime
 from resort_backend.utils import get_db_or_503, serialize_doc
 from typing import Optional
 
-router = APIRouter(prefix="/cottages", tags=["cottages"])
+router = APIRouter(tags=["cottages"])
 
 # Pydantic model for cottage
 class CottageModel(BaseModel):

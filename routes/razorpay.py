@@ -14,7 +14,7 @@ import razorpay
 import random
 import string
 
-router = APIRouter(prefix="/payments/razorpay", tags=["payments"])
+router = APIRouter(tags=["payments"])
 
 
 class CreateOrderRequest(BaseModel):

@@ -9,7 +9,7 @@ import logging
 logger = logging.getLogger("resort_backend.programs")
 from resort_backend.models import Program
 
-router = APIRouter(prefix="/programs", tags=["programs"])
+router = APIRouter(tags=["programs"])
 
 @router.get("/")
 async def list_programs(request: Request, tag: str | None = None):

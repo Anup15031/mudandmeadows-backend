@@ -5,7 +5,7 @@ from datetime import datetime
 from resort_backend.utils import get_db_or_503, serialize_doc
 from resort_backend.routes.events import publish_event
 
-router = APIRouter(prefix="/accommodations", tags=["accommodations"])
+router = APIRouter(tags=["accommodations"])
 
 @router.get("/")
 async def get_all_accommodations(request: Request):

@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from typing import Optional
 from bson import ObjectId
 
-router = APIRouter(prefix="/api", tags=["dining"])
+router = APIRouter(tags=["dining"])
 
 
 # Pydantic model for menu item
