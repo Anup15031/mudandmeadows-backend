@@ -1,5 +1,56 @@
+import os
+from fastapi import FastAPI, Request, status
+from fastapi.responses import JSONResponse
+import httpx
+
+# ...existing code...
+
+app = FastAPI(
+    title="Resort Booking API",
+    description="API documentation for Resort Booking backend.",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
+)
+
+# --- API Key and reCAPTCHA Middleware ---
+BOOKING_API_KEY = os.getenv("BOOKING_API_KEY")
+RECAPTCHA_SECRET = os.getenv("RECAPTCHA_SECRET")
+
+@app.middleware("http")
+async def secure_booking_api(request: Request, call_next):
+    # Only protect booking creation endpoint
+    if request.method == "POST" and request.url.path.startswith("/api/bookings"):
+        # API Key check
+        api_key = request.headers.get("x-api-key")
+        if not BOOKING_API_KEY or api_key != BOOKING_API_KEY:
+            return JSONResponse({"detail": "Forbidden"}, status_code=status.HTTP_403_FORBIDDEN)
+
+        # reCAPTCHA check (token must be in header or body)
+        recaptcha_token = request.headers.get("x-recaptcha-token")
+        if not recaptcha_token:
+            try:
+                body = await request.json()
+                recaptcha_token = body.get("recaptcha_token")
+            except Exception:
+                pass
+        if not recaptcha_token or not RECAPTCHA_SECRET:
+            return JSONResponse({"detail": "Missing reCAPTCHA token"}, status_code=status.HTTP_400_BAD_REQUEST)
+        # Verify with Google
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "https://www.google.com/recaptcha/api/siteverify",
+                data={"secret": RECAPTCHA_SECRET, "response": recaptcha_token},
+                timeout=5.0
+            )
+            data = resp.json()
+            if not data.get("success"):
+                return JSONResponse({"detail": "Failed reCAPTCHA verification"}, status_code=status.HTTP_400_BAD_REQUEST)
+    return await call_next(request)
 from routes import cottages
 from routes import bookings
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter
@@ -143,7 +194,10 @@ from routes.dining import router as dining_router
 app.include_router(dining_router, prefix="/api/dining")
 from routes.contact import router as contact_router
 app.include_router(contact_router, prefix="/api/contact")
+
+# Register the experience_journey router
 from routes import experience_journey
+app.include_router(experience_journey.router)
 
 # Serve uploaded files from /uploads
 uploads_path = os.path.join(os.path.dirname(__file__), "uploads")

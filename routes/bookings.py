@@ -100,7 +100,7 @@ async def get_booking(request: Request, booking_id: str):
 @router.post("/")
 async def create_booking(request: Request, booking: BookingCreateRequest):
     db = get_db_or_503(request)
-    booking_dict = booking.dict()
+    booking_dict = booking.dict(exclude_unset=True)
     # Ensure extraBeds and cottage fields
     if "extraBeds" not in booking_dict:
         booking_dict["extraBeds"] = 0
